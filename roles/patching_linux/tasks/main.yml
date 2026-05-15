@@ -10,7 +10,7 @@
 - name: Apply security patches
   ansible.builtin.dnf:
     name: "*"
-    security: yes
+    security: true
     state: latest
   when: ansible_os_family == "RedHat"
 

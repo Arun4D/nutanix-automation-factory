@@ -44,13 +44,13 @@
 
 - name: OS Baseline and Security Hardening
   hosts: new_linux_vms
-  become: yes
+  become: true
   roles:
     - linux_baseline
     - security_hardening
     - domain_join
     - audit_logging
-    
+
   post_tasks:
     - name: Update ServiceNow CMDB
       servicenow.itsm.configuration_item:

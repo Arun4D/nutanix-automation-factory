@@ -24,4 +24,4 @@
   ansible.builtin.service:
     name: auditd
     state: started
-    enabled: yes
+    enabled: true

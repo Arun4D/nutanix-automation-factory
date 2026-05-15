@@ -2,7 +2,7 @@ name: Day1ProvisioningArchitect
 description: >
   Specialized agent for Day-1 VM and Server provisioning operations.
   Handles Linux and Windows baseline configurations, Active Directory
-  domain joining, and the orchestration of security, monitoring, and 
+  domain joining, and the orchestration of security, monitoring, and
   backup agents.
 version: 1.0
 

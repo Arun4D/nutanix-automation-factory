@@ -5,8 +5,8 @@
   ansible.windows.win_shell: |
     .\scripts\powershell\windows_baseline.ps1 -VMName "{{ inventory_hostname }}"
   args:
-    chdir: "C:\\NutanixFactory\\" # Assuming scripts are copied here during an earlier step or fetched from Git
-  ignore_errors: true # In a real scenario we'd want strict error checking
+    chdir: "C:\\NutanixFactory\\"  # Assuming scripts are copied here during an earlier step or fetched from Git
+  ignore_errors: true  # In a real scenario we'd want strict error checking
 
 - name: Set Windows Timezone
   ansible.windows.win_timezone:

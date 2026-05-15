@@ -1,10 +1,10 @@
 ---
 - name: Day 2 - Windows Patching and Vulnerability Remediation
   hosts: windows_servers
-  serial: "30%" # Rolling update strategy
+  serial: "30%"  # Rolling update strategy
   vars_files:
     - ../group_vars/all.yml
-    
+
   pre_tasks:
     # 1. Snapshot Automation
     - name: Create Pre-Patching Snapshot in Nutanix
@@ -39,6 +39,6 @@
   post_tasks:
     - name: Log Patching to Audit Log
       ansible.builtin.command: >
-        python3 ../scripts/python/audit_export.py 
+        python3 ../scripts/python/audit_export.py
         "PATCHING" "{{ inventory_hostname }}" "Windows Patching completed."
       delegate_to: localhost

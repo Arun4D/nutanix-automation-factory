@@ -12,7 +12,7 @@
       ansible.builtin.uri:
         url: "https://{{ foundation_ip }}/foundation/bcu_check"
         method: GET
-        return_content: yes
+        return_content: true
       register: hw_check
 
     # 2. IPAM Validation
@@ -20,7 +20,7 @@
       ansible.builtin.uri:
         url: "https://ipam.enterprise.local/api/validate?cluster={{ target_cluster_name }}"
         method: GET
-        return_content: yes
+        return_content: true
       register: ipam_check
 
     # 3. DNS/NTP Validation
@@ -30,7 +30,7 @@
         port: 53
         timeout: 5
       loop: "{{ dns_servers }}"
-      ignore_errors: yes
+      ignore_errors: true
 
     # 4. Nutanix Foundation Deployment
     - name: Run Nutanix Foundation API to image nodes
@@ -91,8 +91,8 @@
         name: "{{ item.name }}"
         source_uri: "{{ item.uri }}"
       loop:
-        - { name: "rhel8-golden-image", uri: "http://image-repo/rhel8.qcow2" }
-        - { name: "win2022-golden-image", uri: "http://image-repo/win2022.qcow2" }
+        - {name: "rhel8-golden-image", uri: "http://image-repo/rhel8.qcow2"}
+        - {name: "win2022-golden-image", uri: "http://image-repo/win2022.qcow2"}
 
     # 10. Category/Tag baseline
     - name: Create Flow Security Categories
@@ -110,6 +110,6 @@
     # 11. Audit Registration
     - name: Register Cluster build to Audit Log
       ansible.builtin.command: >
-        python3 ../scripts/python/audit_export.py 
+        python3 ../scripts/python/audit_export.py
         "CLUSTER_BUILD" "{{ target_cluster_name }}" "Day-0 deployment completed."
       delegate_to: localhost

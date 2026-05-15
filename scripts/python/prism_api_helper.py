@@ -1,11 +1,15 @@
 import requests
 import json
 import urllib3
+import logging
 
-# Disable insecure request warnings
+# Disable insecure request warnings for self-signed Prism Central certificates
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class PrismCentralAPI:
+    """Helper class to interact with Nutanix Prism Central v3 REST APIs."""
+    
     def __init__(self, pc_ip, username, password):
         self.pc_ip = pc_ip
         self.username = username
@@ -23,24 +27,36 @@ class PrismCentralAPI:
         """Fetch all registered Nutanix clusters."""
         url = f"{self.base_url}/clusters/list"
         payload = {"kind": "cluster"}
-        response = self.session.post(url, json=payload)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = self.session.post(url, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Failed to fetch cluster list: {str(e)}")
+            raise
 
     def get_vm_list(self):
         """Fetch all VMs running in the environment."""
         url = f"{self.base_url}/vms/list"
         payload = {"kind": "vm"}
-        response = self.session.post(url, json=payload)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = self.session.post(url, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Failed to fetch VM list: {str(e)}")
+            raise
 
     def create_vm(self, vm_spec):
-        """Create a new VM."""
+        """Create a new VM using the provided spec."""
         url = f"{self.base_url}/vms"
-        response = self.session.post(url, json=vm_spec)
-        response.raise_for_status()
-        return response.json()
+        try:
+            response = self.session.post(url, json=vm_spec)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Failed to create VM: {str(e)}")
+            raise
 
 if __name__ == "__main__":
-    print("Prism Central API Helper initialized.")
+    logging.info("Prism Central API Helper initialized.")

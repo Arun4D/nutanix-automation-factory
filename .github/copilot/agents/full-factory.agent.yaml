@@ -205,4 +205,4 @@ success_criteria:
   - ServiceNow integration exists
   - Logs and audit are centralized
   - Modular enterprise maintainability
-  - Copilot can iteratively expand modules 
+  - Copilot can iteratively expand modules

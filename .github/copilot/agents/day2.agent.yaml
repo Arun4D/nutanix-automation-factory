@@ -1,7 +1,7 @@
 name: Day2OperationsArchitect
 description: >
-  Specialized agent handling Day-2 lifecycle operations including 
-  vulnerability patching, security compliance (DSC), DR failovers, 
+  Specialized agent handling Day-2 lifecycle operations including
+  vulnerability patching, security compliance (DSC), DR failovers,
   and scale up/down actions.
 version: 1.0
 

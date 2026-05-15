@@ -42,7 +42,7 @@
     - domain_join
     # 3. Baseline OS Config
     - windows_baseline
-    
+
   tasks:
     # 4. Security Agents
     - name: Install CrowdStrike Falcon Agent
@@ -70,7 +70,7 @@
       ansible.windows.win_feature:
         name: Web-Server
         state: present
-        include_management_tools: yes
+        include_management_tools: true
       when: app_type == 'web'
 
     # 8. DB Provisioning

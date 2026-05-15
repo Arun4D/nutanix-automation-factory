@@ -40,5 +40,5 @@ scope:
 
 prompts:
   default: >
-    Deploy a new Nutanix cluster via Foundation and validate core 
+    Deploy a new Nutanix cluster via Foundation and validate core
     infrastructure services.
