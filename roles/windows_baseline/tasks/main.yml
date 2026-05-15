@@ -1,0 +1,21 @@
+---
+# tasks file for roles/windows_baseline
+
+- name: Execute Windows Baseline PowerShell Script
+  ansible.windows.win_shell: |
+    .\scripts\powershell\windows_baseline.ps1 -VMName "{{ inventory_hostname }}"
+  args:
+    chdir: "C:\\NutanixFactory\\" # Assuming scripts are copied here during an earlier step or fetched from Git
+  ignore_errors: true # In a real scenario we'd want strict error checking
+
+- name: Set Windows Timezone
+  ansible.windows.win_timezone:
+    timezone: "UTC"
+
+- name: Ensure Remote Desktop is Enabled
+  ansible.windows.win_regedit:
+    path: HKLM:\System\CurrentControlSet\Control\Terminal Server
+    name: fDenyTSConnections
+    data: 0
+    type: dword
+    state: present

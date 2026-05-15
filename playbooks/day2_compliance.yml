@@ -1,0 +1,30 @@
+---
+- name: Day 2 - Compliance and Defender Checks
+  hosts: windows_servers
+  gather_facts: false
+
+  tasks:
+    # 1. Defender Signature Checks
+    - name: Execute Defender Signature Validation Script
+      ansible.windows.win_shell: |
+        .\scripts\powershell\defender_validation.ps1
+      args:
+        chdir: "C:\\NutanixFactory\\"
+      register: defender_result
+      failed_when: "'FAIL' in defender_result.stdout"
+
+    # 2. Compliance Checks
+    - name: Verify DSC Configuration Status
+      ansible.windows.win_shell: |
+        $status = Get-DscConfigurationStatus
+        if ($status.Status -ne "Success") {
+            Write-Error "DSC Compliance check failed."
+            exit 1
+        }
+      register: dsc_result
+      ignore_errors: true
+
+    - name: Enforce DSC Configuration if drifted
+      ansible.windows.win_shell: |
+        Start-DscConfiguration -UseExisting -Wait -Verbose
+      when: dsc_result.failed

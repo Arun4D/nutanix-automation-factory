@@ -1,0 +1,65 @@
+---
+- name: Day 1 - Linux VM Provisioning
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/linux.yml
+
+  tasks:
+    - name: Clone VM from Golden Image
+      nutanix.ncp.vm_clone:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        name: "{{ vm_name }}"
+        source_vm_name: "rhel8-golden-image"
+        cluster_name: "{{ target_cluster_name }}"
+        memory_mb: "{{ memory_mb | default(4096) }}"
+        vcpus: "{{ vcpus | default(2) }}"
+      register: clone_result
+
+    - name: Apply Nutanix Flow Security Categories
+      nutanix.ncp.vm_category:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        vm_name: "{{ vm_name }}"
+        categories:
+          - "Environment:{{ environment_tag }}"
+          - "AppType:Database"
+
+    - name: Wait for SSH to be ready
+      ansible.builtin.wait_for:
+        host: "{{ clone_result.vm.ip }}"
+        port: 22
+        delay: 30
+        timeout: 300
+
+    - name: Add to dynamic inventory
+      ansible.builtin.add_host:
+        name: "{{ clone_result.vm.ip }}"
+        groups: new_linux_vms
+        ansible_user: service_account
+
+- name: OS Baseline and Security Hardening
+  hosts: new_linux_vms
+  become: yes
+  roles:
+    - linux_baseline
+    - security_hardening
+    - domain_join
+    - audit_logging
+    
+  post_tasks:
+    - name: Update ServiceNow CMDB
+      servicenow.itsm.configuration_item:
+        instance: "{{ servicenow_instance }}"
+        username: "{{ servicenow_username }}"
+        password: "{{ servicenow_password }}"
+        name: "{{ inventory_hostname }}"
+        sys_class_name: "cmdb_ci_linux_server"
+        attributes:
+          ip_address: "{{ ansible_default_ipv4.address }}"
+          os: "Red Hat Enterprise Linux"
+          os_version: "{{ ansible_distribution_version }}"

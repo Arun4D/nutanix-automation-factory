@@ -1,0 +1,16 @@
+---
+# Global Variables
+nutanix_prism_central_ip: "{{ vault_pc_ip }}"
+nutanix_prism_username: "admin"
+nutanix_prism_password: "{{ vault_pc_password }}"
+
+servicenow_instance: "dev12345.service-now.com"
+servicenow_username: "api_user"
+servicenow_password: "{{ vault_snow_password }}"
+
+domain_name: "enterprise.local"
+dns_servers:
+  - "10.0.0.10"
+  - "10.0.0.11"
+ntp_servers:
+  - "time.enterprise.local"

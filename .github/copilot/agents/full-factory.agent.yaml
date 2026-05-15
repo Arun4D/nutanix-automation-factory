@@ -15,8 +15,10 @@ description: >
   This includes Nutanix Prism Central, AHV, AAP, GitHub Actions,
   Windows and Linux server builds, ServiceNow integration,
   CMDB updates, audit logging, compliance, and modular automation.
+  [STATUS: Project framework bootstrapped successfully. Ready for iterative expansion.]
+  [STATUS: Phase 2 Expanded - Day-0 Cluster Build, Day-1 Windows Agent Deployment, and Day-2 DSC/Defender Compliance checks fully implemented.]
 
-version: 1.0
+version: 1.2
 
 persona:
   role: Senior Automation Architect

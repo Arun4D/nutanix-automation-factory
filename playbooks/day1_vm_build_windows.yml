@@ -1,0 +1,96 @@
+---
+- name: Day 1 - Windows VM Provisioning
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/windows.yml
+
+  tasks:
+    # 1. Windows VM Provisioning
+    - name: Clone VM from Windows Golden Image
+      nutanix.ncp.vm_clone:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        name: "{{ vm_name }}"
+        source_vm_name: "win2022-golden-image"
+        cluster_name: "{{ target_cluster_name }}"
+        memory_mb: "{{ memory_mb | default(8192) }}"
+        vcpus: "{{ vcpus | default(4) }}"
+      register: clone_result
+
+    - name: Wait for WinRM to be ready
+      ansible.builtin.wait_for:
+        host: "{{ clone_result.vm.ip }}"
+        port: 5986
+        delay: 60
+        timeout: 600
+
+    - name: Add to dynamic inventory
+      ansible.builtin.add_host:
+        name: "{{ clone_result.vm.ip }}"
+        groups: new_windows_vms
+        ansible_user: service_account
+        ansible_connection: winrm
+        ansible_winrm_server_cert_validation: ignore
+
+- name: Windows OS Baseline and Automation
+  hosts: new_windows_vms
+  roles:
+    # 2. Domain Join
+    - domain_join
+    # 3. Baseline OS Config
+    - windows_baseline
+    
+  tasks:
+    # 4. Security Agents
+    - name: Install CrowdStrike Falcon Agent
+      ansible.windows.win_package:
+        path: "\\\\software-repo\\agents\\WindowsSensor.exe"
+        arguments: '/install /quiet /norestart CID={{ falcon_cid }}'
+        state: present
+
+    # 5. Monitoring Agents
+    - name: Install Datadog Agent
+      ansible.windows.win_package:
+        path: "https://s3.amazonaws.com/ddagent-windows/datadog-agent-7-latest.amd64.msi"
+        arguments: 'APIKEY="{{ datadog_api_key }}" SITE="datadoghq.com" /qn'
+        state: present
+
+    # 6. Backup Agents
+    - name: Install Rubrik Backup Agent
+      ansible.windows.win_package:
+        path: "\\\\software-repo\\agents\\RubrikBackupService.msi"
+        arguments: '/qn'
+        state: present
+
+    # 7. Application Stack Deployment
+    - name: Install IIS Application Stack
+      ansible.windows.win_feature:
+        name: Web-Server
+        state: present
+        include_management_tools: yes
+      when: app_type == 'web'
+
+    # 8. DB Provisioning
+    - name: Install SQL Server Pre-reqs
+      ansible.windows.win_feature:
+        name: NET-Framework-Core
+        state: present
+      when: app_type == 'database'
+
+  post_tasks:
+    # 9. ServiceNow CMDB updates
+    - name: Update ServiceNow CMDB
+      servicenow.itsm.configuration_item:
+        instance: "{{ servicenow_instance }}"
+        username: "{{ servicenow_username }}"
+        password: "{{ servicenow_password }}"
+        name: "{{ inventory_hostname }}"
+        sys_class_name: "cmdb_ci_win_server"
+        attributes:
+          ip_address: "{{ ansible_host }}"
+          os: "Windows Server"
+          os_version: "2022"
+      delegate_to: localhost

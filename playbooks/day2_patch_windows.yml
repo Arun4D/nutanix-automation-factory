@@ -1,0 +1,44 @@
+---
+- name: Day 2 - Windows Patching and Vulnerability Remediation
+  hosts: windows_servers
+  serial: "30%" # Rolling update strategy
+  vars_files:
+    - ../group_vars/all.yml
+    
+  pre_tasks:
+    # 1. Snapshot Automation
+    - name: Create Pre-Patching Snapshot in Nutanix
+      nutanix.ncp.vm_snapshot:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        vm_name: "{{ inventory_hostname }}"
+        snapshot_name: "PRE-PATCH-WIN-{{ ansible_date_time.date }}"
+      delegate_to: localhost
+
+  tasks:
+    # 2. Patch Orchestration
+    - name: Install Windows Security Updates
+      ansible.windows.win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - UpdateRollups
+        state: installed
+      register: update_result
+
+    - name: Reboot if required
+      ansible.windows.win_reboot:
+      when: update_result.reboot_required
+
+    # 3. Vulnerability Remediation
+    - name: Run post-patching vulnerability scanner (e.g. Qualys / Nessus agent sync)
+      ansible.windows.win_command: "C:\\Program Files\\Qualys\\QualysAgent\\QualysCloudAgent.exe force-sync"
+      ignore_errors: true
+
+  post_tasks:
+    - name: Log Patching to Audit Log
+      ansible.builtin.command: >
+        python3 ../scripts/python/audit_export.py 
+        "PATCHING" "{{ inventory_hostname }}" "Windows Patching completed."
+      delegate_to: localhost

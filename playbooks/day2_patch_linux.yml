@@ -1,0 +1,45 @@
+---
+- name: Day 2 - Linux Patching Orchestration
+  hosts: linux_servers
+  become: yes
+  serial: "30%" # Rolling update strategy
+  vars_files:
+    - ../group_vars/all.yml
+    
+  pre_tasks:
+    - name: Create Pre-Patching Snapshot in Nutanix
+      nutanix.ncp.vm_snapshot:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        vm_name: "{{ inventory_hostname }}"
+        snapshot_name: "PRE-PATCH-{{ ansible_date_time.date }}"
+      delegate_to: localhost
+      become: no
+
+    - name: Create ServiceNow Change Request
+      servicenow.itsm.change_request:
+        instance: "{{ servicenow_instance }}"
+        username: "{{ servicenow_username }}"
+        password: "{{ servicenow_password }}"
+        type: "standard"
+        short_description: "Standard Linux Patching for {{ inventory_hostname }}"
+        state: "implement"
+      delegate_to: localhost
+      become: no
+      register: snow_cr
+
+  roles:
+    - patching_linux
+
+  post_tasks:
+    - name: Close ServiceNow Change Request
+      servicenow.itsm.change_request:
+        instance: "{{ servicenow_instance }}"
+        username: "{{ servicenow_username }}"
+        password: "{{ servicenow_password }}"
+        number: "{{ snow_cr.record.number }}"
+        state: "closed"
+        close_code: "successful"
+      delegate_to: localhost
+      become: no

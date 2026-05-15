@@ -1,0 +1,32 @@
+---
+# tasks file for roles/linux_baseline
+
+- name: Update all packages to the latest version
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: Set timezone to UTC
+  ansible.builtin.timezone:
+    name: UTC
+
+- name: Ensure chrony is installed for NTP
+  ansible.builtin.package:
+    name: chrony
+    state: present
+
+- name: Configure NTP servers
+  ansible.builtin.lineinfile:
+    path: /etc/chrony.conf
+    regexp: '^server '
+    line: "server {{ item }} iburst"
+  loop: "{{ dns_servers }}"
+  notify: restart chronyd
+
+- name: Disable root SSH login
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+  notify: restart sshd

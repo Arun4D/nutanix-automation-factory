@@ -1,0 +1,18 @@
+---
+# tasks file for roles/servicenow_cmdb
+
+- name: Register or Update CI in ServiceNow
+  servicenow.itsm.configuration_item:
+    instance: "{{ servicenow_instance }}"
+    username: "{{ servicenow_username }}"
+    password: "{{ servicenow_password }}"
+    name: "{{ inventory_hostname }}"
+    sys_class_name: "{{ sn_sys_class_name | default('cmdb_ci_server') }}"
+    attributes:
+      ip_address: "{{ ansible_default_ipv4.address | default(inventory_hostname) }}"
+      os: "{{ ansible_distribution | default('Unknown') }}"
+      os_version: "{{ ansible_distribution_version | default('Unknown') }}"
+      cpu_count: "{{ ansible_processor_vcpus | default(1) }}"
+      ram: "{{ ansible_memtotal_mb | default(1024) }}"
+  delegate_to: localhost
+  become: false

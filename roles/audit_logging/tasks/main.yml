@@ -1,0 +1,27 @@
+---
+# tasks file for roles/audit_logging
+
+- name: Ensure rsyslog is installed
+  ansible.builtin.package:
+    name: rsyslog
+    state: present
+
+- name: Configure remote syslog forwarding
+  ansible.builtin.template:
+    src: "rsyslog.conf.j2"
+    dest: "/etc/rsyslog.d/99-remote.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart rsyslog
+
+- name: Install auditd
+  ansible.builtin.package:
+    name: audit
+    state: present
+
+- name: Start and enable auditd service
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: yes

@@ -1,0 +1,46 @@
+name: Windows Image Build and Provisioning
+on:
+  workflow_dispatch:
+    inputs:
+      vm_name:
+        description: 'Target VM Name'
+        required: true
+      cluster:
+        description: 'Target Nutanix Cluster'
+        required: true
+        default: 'prod-cluster-01'
+
+jobs:
+  build-windows-vm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure Nutanix Credentials
+        run: |
+          echo "Setting up Nutanix CLI"
+          # Typically uses an action like nutanix/ncli-action
+
+      - name: Clone Golden Image
+        run: |
+          echo "Cloning Windows Golden Image via Prism Central API"
+          curl -k -u "${{ secrets.NTNX_USER }}:${{ secrets.NTNX_PASS }}" \
+            -X POST "https://${{ secrets.NTNX_PC_IP }}:9440/api/nutanix/v3/vms" \
+            -d @templates/windows/clone_spec.json
+
+      - name: Run Windows DSC Baseline
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            .\scripts\powershell\windows_baseline.ps1 -VMName "${{ github.event.inputs.vm_name }}"
+
+      - name: Update ServiceNow CMDB
+        uses: servicenow/servicenow-action@v2
+        with:
+          instance: ${{ secrets.SNOW_INSTANCE }}
+          username: ${{ secrets.SNOW_USER }}
+          password: ${{ secrets.SNOW_PASS }}
+          action: "create-ci"
+          ci-type: "cmdb_ci_win_server"
+          ci-name: "${{ github.event.inputs.vm_name }}"

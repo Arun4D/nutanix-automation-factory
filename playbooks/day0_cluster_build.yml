@@ -1,0 +1,115 @@
+---
+- name: Day 0 - Nutanix Cluster Build
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/nutanix.yml
+
+  tasks:
+    # 1. Hardware Precheck
+    - name: Hardware precheck validation
+      ansible.builtin.uri:
+        url: "https://{{ foundation_ip }}/foundation/bcu_check"
+        method: GET
+        return_content: yes
+      register: hw_check
+
+    # 2. IPAM Validation
+    - name: Pre-check IPAM validation
+      ansible.builtin.uri:
+        url: "https://ipam.enterprise.local/api/validate?cluster={{ target_cluster_name }}"
+        method: GET
+        return_content: yes
+      register: ipam_check
+
+    # 3. DNS/NTP Validation
+    - name: DNS and NTP connectivity check
+      ansible.builtin.wait_for:
+        host: "{{ item }}"
+        port: 53
+        timeout: 5
+      loop: "{{ dns_servers }}"
+      ignore_errors: yes
+
+    # 4. Nutanix Foundation Deployment
+    - name: Run Nutanix Foundation API to image nodes
+      ansible.builtin.uri:
+        url: "https://{{ foundation_ip }}/foundation/image_nodes"
+        method: POST
+        body_format: json
+        body: "{{ lookup('file', '../templates/foundation/cluster_spec.json') }}"
+      register: foundation_result
+
+    # 5. Cluster Creation
+    - name: Create Nutanix Cluster
+      nutanix.ncp.cluster_create:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        pc_username: "{{ nutanix_prism_username }}"
+        pc_password: "{{ nutanix_prism_password }}"
+        cluster_name: "{{ target_cluster_name }}"
+        nodes: "{{ target_nodes }}"
+        redundancy_factor: 2
+      register: cluster_result
+
+    # 6. Storage Container Creation
+    - name: Create Base Storage Container
+      nutanix.ncp.storage_container:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        name: "container-vm-base"
+        cluster_name: "{{ target_cluster_name }}"
+        compression: true
+        deduplication: true
+
+    # 7. Network/VLAN Creation
+    - name: Create VM Network VLAN
+      nutanix.ncp.subnet:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        cluster_name: "{{ target_cluster_name }}"
+        name: "vlan-app-100"
+        vlan_id: 100
+        type: "VLAN"
+
+    # 8. Prism Central Registration
+    - name: Register to Prism Central
+      nutanix.ncp.pc_register:
+        cluster_ip: "{{ cluster_result.cluster.ip }}"
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+
+    # 9. Golden Image Upload
+    - name: Upload Windows and Linux Golden Images
+      nutanix.ncp.image:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        name: "{{ item.name }}"
+        source_uri: "{{ item.uri }}"
+      loop:
+        - { name: "rhel8-golden-image", uri: "http://image-repo/rhel8.qcow2" }
+        - { name: "win2022-golden-image", uri: "http://image-repo/win2022.qcow2" }
+
+    # 10. Category/Tag baseline
+    - name: Create Flow Security Categories
+      nutanix.ncp.category:
+        pc_ip: "{{ nutanix_prism_central_ip }}"
+        username: "{{ nutanix_prism_username }}"
+        password: "{{ nutanix_prism_password }}"
+        name: "Environment"
+        description: "Deployment Environment"
+        values:
+          - "Prod"
+          - "Dev"
+          - "Test"
+
+    # 11. Audit Registration
+    - name: Register Cluster build to Audit Log
+      ansible.builtin.command: >
+        python3 ../scripts/python/audit_export.py 
+        "CLUSTER_BUILD" "{{ target_cluster_name }}" "Day-0 deployment completed."
+      delegate_to: localhost

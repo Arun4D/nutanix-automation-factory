@@ -1,0 +1,6 @@
+---
+collections:
+  - name: nutanix.ncp
+  - name: servicenow.itsm
+  - name: ansible.windows
+  - name: community.general
